@@ -1,6 +1,5 @@
 import { CodegenPlugin } from "@graphql-codegen/plugin-helpers";
 import { LoadedFragment } from "@graphql-codegen/visitor-plugin-common";
-import { camelCase } from "camel-case";
 import {
   concatAST,
   FragmentDefinitionNode,
@@ -65,9 +64,7 @@ module.exports = {
 
     const imports = [
       `import client from "${config.clientPath}";`,
-      `import type {
-        ${operationImport}
-      } from "@apollo/client";`,
+      `import type { ${operationImport} } from "@apollo/client";`,
       `import { readable } from "svelte/store";`,
       `import type { Readable } from "svelte/store";`,
       `import gql from "graphql-tag"`,
@@ -84,84 +81,92 @@ module.exports = {
         const opv = `${op}Variables`;
         let operation;
         if (o.operation == "query") {
-          operation = `export const ${o.name.value} = (
-            options: Omit<
-              WatchQueryOptions<${opv}>, 
-              "query"
-            >
-          ): Readable<
-            ApolloQueryResult<${op}> & {
-              query: ObservableQuery<
-                ${op},
-                ${opv}
-              >;
-            }
-          > => {
-            const q = client.watchQuery({
-              query: ${pascalCase(o.name.value)}Doc,
-              ...options,
-            });
-            var result = readable<
-              ApolloQueryResult<${op}> & {
-                query: ObservableQuery<
-                  ${op},
-                  ${opv}
-                >;
-              }
-            >(
-              { data: null, loading: true, error: null, networkStatus: 1, query: null },
-              (set) => {
-                q.subscribe((v) => {
-                  set({ ...v, query: q });
-                });
-              }
-            );
-            return result;
-          }
-        `;
+          operation = `
+type ApolloQuery${op}Result = ApolloQueryResult<${op}> & {
+  query: ObservableQuery<
+    ${op},
+    ${opv}
+  >;
+}
+
+export const ${o.name.value} = (
+  options: Omit<
+    WatchQueryOptions<${opv}>,
+    "query"
+  >
+): Readable<ApolloQuery${op}Result> => {
+  const q = client.watchQuery({
+    query: ${pascalCase(o.name.value)}Doc,
+    ...options,
+  });
+  const data = client.readQuery({
+    query: ${pascalCase(o.name.value)}Doc,
+    ...options,
+  });
+  var result = readable<ApolloQuery${op}Result>(
+    {
+      data: data || null, 
+      loading: !data, 
+      error: null, 
+      networkStatus: 1, 
+      query: null 
+    },
+    (set) => {
+      q.subscribe((v) => {
+        set({ ...v, query: q });
+      });
+    }
+  );
+  return result;
+}
+`;
           if (config.asyncQuery) {
             operation =
               operation +
               `
-              export const Async${o.name.value} = (
-                options: Omit<
-                  QueryOptions<${opv}>,
-                  "query"
-                >
-              ) => {
-                return client.query<${op}>({query: ${pascalCase(
-                o.name.value
-              )}Doc, ...options})
-              }
+export const Async${o.name.value} = (
+  options: Omit<
+    QueryOptions<${opv}>,
+    "query"
+  >
+) => {
+  return client.query<${op}>({query: ${pascalCase(
+  o.name.value
+)}Doc, ...options})
+}
             `;
           }
         }
         if (o.operation == "mutation") {
-          operation = `export const ${o.name.value} = (
-            options: Omit<
-              MutationOptions<any, ${opv}>, 
-              "mutation"
-            >
-          ) => {
-            const m = client.mutate<${op}, ${opv}>({
-              mutation: ${pascalCase(o.name.value)}Doc,
-              ...options,
-            });
-            return m;
-          }`;
+          operation = `
+export const ${o.name.value} = (
+  options: Omit<
+    MutationOptions<any, ${opv}>, 
+    "mutation"
+  >
+) => {
+  const m = client.mutate<${op}, ${opv}>({
+    mutation: ${pascalCase(o.name.value)}Doc,
+    ...options,
+  });
+  return m;
+}
+          `;
         }
         if (o.operation == "subscription") {
-          operation = `export const ${o.name.value} = (
-            options: Omit<SubscriptionOptions<${opv}>, "query">
-          ) => {
-            const q = client.subscribe<${op}, ${opv}>(
-              {
-                query: ${pascalCase(o.name.value)}Doc,
-                ...options,
-              }
-            )
-            return q;
-          }`;
+          operation = `
+export const ${o.name.value} = (
+  options: Omit<SubscriptionOptions<${opv}>, "query">
+) => {
+  const q = client.subscribe<${op}, ${opv}>(
+    {
+      query: ${pascalCase(o.name.value)}Doc,
+      ...options,
+    }
+  )
+  return q;
+}
+          `;
         }
         return operation;
       })
