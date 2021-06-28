@@ -63,8 +63,7 @@ module.exports = {
     }`.slice(0, -2);
 
     const imports = [
-      `import client from "${config.clientPath}";`,
-      `import type { ${operationImport} } from "@apollo/client";`,
+      `import type { ApolloClient, ${operationImport} } from "@apollo/client";`,
       `import { readable } from "svelte/store";`,
       `import type { Readable } from "svelte/store";`,
       `import gql from "graphql-tag"`,
@@ -90,6 +89,7 @@ type ApolloQuery${op}Result = ApolloQueryResult<${op}> & {
 }
 
 export const ${o.name.value} = (
+  client: ApolloClient<any>,
   options: Omit<
     WatchQueryOptions<${opv}>,
     "query"
@@ -125,6 +125,7 @@ export const ${o.name.value} = (
               operation +
               `
 export const Async${o.name.value} = (
+  client: ApolloClient<any>,
   options: Omit<
     QueryOptions<${opv}>,
     "query"
@@ -140,6 +141,7 @@ export const Async${o.name.value} = (
         if (o.operation == "mutation") {
           operation = `
 export const ${o.name.value} = (
+  client: ApolloClient<any>,
   options: Omit<
     MutationOptions<any, ${opv}>, 
     "mutation"
@@ -156,6 +158,7 @@ export const ${o.name.value} = (
         if (o.operation == "subscription") {
           operation = `
 export const ${o.name.value} = (
+  client: ApolloClient<any>,
   options: Omit<SubscriptionOptions<${opv}>, "query">
 ) => {
   const q = client.subscribe<${op}, ${opv}>(

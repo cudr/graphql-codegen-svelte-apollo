@@ -33,8 +33,7 @@ module.exports = {
             ? "SubscriptionOptions, "
             : "")).slice(0, -2);
         var imports = [
-            "import client from \"" + config.clientPath + "\";",
-            "import type { " + operationImport + " } from \"@apollo/client\";",
+            "import type { ApolloClient, " + operationImport + " } from \"@apollo/client\";",
             "import { readable } from \"svelte/store\";",
             "import type { Readable } from \"svelte/store\";",
             "import gql from \"graphql-tag\"",
@@ -48,18 +47,18 @@ module.exports = {
             var opv = op + "Variables";
             var operation;
             if (o.operation == "query") {
-                operation = "\ntype ApolloQuery" + op + "Result = ApolloQueryResult<" + op + "> & {\n  query: ObservableQuery<\n    " + op + ",\n    " + opv + "\n  >;\n}\n\nexport const " + o.name.value + " = (\n  options: Omit<\n    WatchQueryOptions<" + opv + ">,\n    \"query\"\n  >\n): Readable<ApolloQuery" + op + "Result> => {\n  const q = client.watchQuery({\n    query: " + pascal_case_1.pascalCase(o.name.value) + "Doc,\n    ...options,\n  });\n  const data = client.readQuery({\n    query: " + pascal_case_1.pascalCase(o.name.value) + "Doc,\n    ...options,\n  });\n  var result = readable<ApolloQuery" + op + "Result>(\n    {\n      data: data || null, \n      loading: !data, \n      error: null, \n      networkStatus: 1, \n      query: null \n    },\n    (set) => {\n      q.subscribe((v) => {\n        set({ ...v, query: q });\n      });\n    }\n  );\n  return result;\n}\n";
+                operation = "\ntype ApolloQuery" + op + "Result = ApolloQueryResult<" + op + "> & {\n  query: ObservableQuery<\n    " + op + ",\n    " + opv + "\n  >;\n}\n\nexport const " + o.name.value + " = (\n  client: ApolloClient<any>,\n  options: Omit<\n    WatchQueryOptions<" + opv + ">,\n    \"query\"\n  >\n): Readable<ApolloQuery" + op + "Result> => {\n  const q = client.watchQuery({\n    query: " + pascal_case_1.pascalCase(o.name.value) + "Doc,\n    ...options,\n  });\n  const data = client.readQuery({\n    query: " + pascal_case_1.pascalCase(o.name.value) + "Doc,\n    ...options,\n  });\n  var result = readable<ApolloQuery" + op + "Result>(\n    {\n      data: data || null, \n      loading: !data, \n      error: null, \n      networkStatus: 1, \n      query: null \n    },\n    (set) => {\n      q.subscribe((v) => {\n        set({ ...v, query: q });\n      });\n    }\n  );\n  return result;\n}\n";
                 if (config.asyncQuery) {
                     operation =
                         operation +
-                            ("\nexport const Async" + o.name.value + " = (\n  options: Omit<\n    QueryOptions<" + opv + ">,\n    \"query\"\n  >\n) => {\n  return client.query<" + op + ">({query: " + pascal_case_1.pascalCase(o.name.value) + "Doc, ...options})\n}\n            ");
+                            ("\nexport const Async" + o.name.value + " = (\n  client: ApolloClient<any>,\n  options: Omit<\n    QueryOptions<" + opv + ">,\n    \"query\"\n  >\n) => {\n  return client.query<" + op + ">({query: " + pascal_case_1.pascalCase(o.name.value) + "Doc, ...options})\n}\n            ");
                 }
             }
             if (o.operation == "mutation") {
-                operation = "\nexport const " + o.name.value + " = (\n  options: Omit<\n    MutationOptions<any, " + opv + ">, \n    \"mutation\"\n  >\n) => {\n  const m = client.mutate<" + op + ", " + opv + ">({\n    mutation: " + pascal_case_1.pascalCase(o.name.value) + "Doc,\n    ...options,\n  });\n  return m;\n}\n          ";
+                operation = "\nexport const " + o.name.value + " = (\n  client: ApolloClient<any>,\n  options: Omit<\n    MutationOptions<any, " + opv + ">, \n    \"mutation\"\n  >\n) => {\n  const m = client.mutate<" + op + ", " + opv + ">({\n    mutation: " + pascal_case_1.pascalCase(o.name.value) + "Doc,\n    ...options,\n  });\n  return m;\n}\n          ";
             }
             if (o.operation == "subscription") {
-                operation = "\nexport const " + o.name.value + " = (\n  options: Omit<SubscriptionOptions<" + opv + ">, \"query\">\n) => {\n  const q = client.subscribe<" + op + ", " + opv + ">(\n    {\n      query: " + pascal_case_1.pascalCase(o.name.value) + "Doc,\n      ...options,\n    }\n  )\n  return q;\n}\n          ";
+                operation = "\nexport const " + o.name.value + " = (\n  client: ApolloClient<any>,\n  options: Omit<SubscriptionOptions<" + opv + ">, \"query\">\n) => {\n  const q = client.subscribe<" + op + ", " + opv + ">(\n    {\n      query: " + pascal_case_1.pascalCase(o.name.value) + "Doc,\n      ...options,\n    }\n  )\n  return q;\n}\n          ";
             }
             return operation;
         })
